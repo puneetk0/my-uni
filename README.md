@@ -9,7 +9,7 @@ AchieveHub is a platform for students to showcase their academic and extracurric
 *   **Opportunities Board:** Students and faculty can post various opportunities (hackathons, internships, projects).
 *   **Opportunity Approval Workflow:** Faculty-posted opportunities are auto-approved; student-posted opportunities require faculty approval.
 *   **Faculty Dashboard:** A dedicated dashboard for faculty to manage both achievements and opportunities.
-
+```
 ## How can I edit this code?
 
 # Step 1: Clone the repository using the project's Git URL.
