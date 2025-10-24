@@ -16,6 +16,9 @@ const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const tilts = [-4, -2, 1, 3, 5];
+  const totalCards = achievements.length + 1;
+  const forceTwoCols = totalCards <= 3;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -35,7 +38,7 @@ const Index = () => {
     if (error) {
       console.error('Error fetching achievements:', error);
     } else {
-      setAchievements(data || []);
+      setAchievements((data as any as Achievement[]) || []);
     }
   };
 
@@ -44,18 +47,51 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen">
       <Navbar />
-      
-      <div className="container mx-auto p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {achievements.map(achievement => (
+
+      {/* Clean subtle background - no blobs! */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          backgroundColor: '#faf8f5',
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(139, 92, 246, 0.03) 49px, rgba(139, 92, 246, 0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(139, 92, 246, 0.03) 49px, rgba(139, 92, 246, 0.03) 50px)',
+          backgroundSize: '50px 50px'
+        }}
+      />
+
+      <div className="container mx-auto px-4 py-10 md:py-14 max-w-6xl">
+        <div className="mb-12 md:mb-16 text-center">
+          <h1 
+            className="text-5xl md:text-6xl font-bold mb-3 tracking-tight"
+            style={{
+              fontFamily: '"Permanent Marker", cursive',
+              color: '#2d3748',
+              textShadow: '2px 2px 0px rgba(139, 92, 246, 0.1)'
+            }}
+          >
+            Wall of Fame
+          </h1>
+        
+        </div>
+
+        <div className={(forceTwoCols ? 'grid grid-cols-2' : 'grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))]') + ' gap-10 justify-items-center'}>
+          {achievements.map((achievement, index) => (
             <PolaroidCard
               key={achievement.id}
               image={achievement.media_url || ''}
               text={achievement.short_description}
+              tilt={tilts[index % tilts.length]}
             />
           ))}
+
+          <PolaroidCard
+            variant="mystery"
+            text="Could be you!"
+            href="/submit"
+            tilt={2}
+          />
         </div>
       </div>
     </div>

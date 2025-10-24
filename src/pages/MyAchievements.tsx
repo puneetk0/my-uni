@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Award, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Award, Clock, CheckCircle, XCircle, Calendar, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -50,56 +48,86 @@ export default function MyAchievements() {
     setLoading(false);
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold" style={{ backgroundColor: '#d1fae5', color: '#065f46' }}>
+            <CheckCircle className="h-3.5 w-3.5" />
+            Approved
+          </div>
+        );
       case 'rejected':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold" style={{ backgroundColor: '#fee2e2', color: '#991b1b' }}>
+            <XCircle className="h-3.5 w-3.5" />
+            Rejected
+          </div>
+        );
       default:
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'rejected':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
-      default:
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+        return (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>
+            <Clock className="h-3.5 w-3.5" />
+            Pending Review
+          </div>
+        );
     }
   };
 
   const getTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      hackathon: 'bg-primary/10 text-primary border-primary/20',
-      research: 'bg-accent/10 text-accent border-accent/20',
-      internship: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-      project: 'bg-green-500/10 text-green-500 border-green-500/20',
-      competition: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-      other: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+    const colors: Record<string, { bg: string; text: string; accent: string }> = {
+      hackathon: { bg: '#e6f0ff', text: '#3271f0', accent: '#3271f0' },
+      research: { bg: '#f0e6ff', text: '#7c3aed', accent: '#7c3aed' },
+      internship: { bg: '#dbeafe', text: '#1e40af', accent: '#1e40af' },
+      project: { bg: '#d1fae5', text: '#065f46', accent: '#10b981' },
+      competition: { bg: '#fed7aa', text: '#c2410c', accent: '#f97316' },
+      other: { bg: '#e5e7eb', text: '#4b5563', accent: '#6b7280' },
     };
     return colors[type] || colors.other;
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 animate-fade-in">
+      {/* Background */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          backgroundColor: '#faf8f5',
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px)',
+          backgroundSize: '50px 50px'
+        }}
+      />
+      
+      <div className="container mx-auto px-4 py-12">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            <h1 
+              className="text-3xl md:text-4xl font-bold mb-2 tracking-tight"
+              style={{
+                fontFamily: '"Inter", sans-serif',
+                color: '#1a202c',
+                letterSpacing: '-0.02em'
+              }}
+            >
               My Achievements
             </h1>
-            <p className="text-muted-foreground">Track and manage all your accomplishments</p>
+            <p style={{ color: '#718096', fontSize: '0.95rem' }}>
+              {achievements.length} {achievements.length === 1 ? 'achievement' : 'achievements'} and counting
+            </p>
           </div>
           
           <Button 
             onClick={() => navigate('/submit')}
-            className="gradient-primary shadow-glow"
+            className="text-white font-semibold h-11 px-6 transition-all hover:scale-[1.02]"
+            style={{
+              background: 'linear-gradient(135deg, #3271f0 0%, #1e4fd9 100%)',
+              borderRadius: '10px',
+              boxShadow: '0 4px 16px rgba(50, 113, 240, 0.3)'
+            }}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Achievement
@@ -107,95 +135,209 @@ export default function MyAchievements() {
         </div>
 
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-6">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="glass-card animate-pulse">
-                <CardHeader className="space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                  <div className="h-3 bg-muted rounded w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <div className="h-20 bg-muted rounded" />
-                </CardContent>
-              </Card>
+              <div 
+                key={i} 
+                className="animate-pulse"
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                }}
+              >
+                <div className="flex gap-6">
+                  <div className="w-48 h-32 bg-gray-200 rounded-lg" />
+                  <div className="flex-1 space-y-3">
+                    <div className="h-6 bg-gray-200 rounded w-2/3" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         ) : achievements.length === 0 ? (
-          <Card className="glass-card text-center py-16">
-            <CardContent>
-              <Award className="h-20 w-20 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-semibold mb-2">No achievements yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Start building your portfolio by adding your first achievement
-              </p>
-              <Button onClick={() => navigate('/submit')} className="gradient-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Achievement
-              </Button>
-            </CardContent>
-          </Card>
+          <div 
+            className="text-center"
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 40px rgba(0, 0, 0, 0.08)',
+              padding: '4rem 2rem'
+            }}
+          >
+            <div 
+              className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(135deg, #3271f0 0%, #1e4fd9 100%)',
+                opacity: 0.1
+              }}
+            >
+              <Award className="h-10 w-10" style={{ color: '#3271f0' }} />
+            </div>
+            <h3 
+              className="text-xl font-bold mb-3"
+              style={{ color: '#1a202c', fontFamily: '"Inter", sans-serif' }}
+            >
+              No achievements yet
+            </h3>
+            <p className="mb-8" style={{ color: '#718096', fontSize: '0.95rem' }}>
+              Start building your portfolio by adding your first achievement
+            </p>
+            <Button 
+              onClick={() => navigate('/submit')}
+              className="text-white font-semibold h-11 px-6"
+              style={{
+                background: 'linear-gradient(135deg, #3271f0 0%, #1e4fd9 100%)',
+                borderRadius: '10px',
+                boxShadow: '0 4px 16px rgba(50, 113, 240, 0.3)'
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Achievement
+            </Button>
+          </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {achievements.map((achievement, index) => (
-              <Card 
-                key={achievement.id} 
-                className="glass-card hover-lift animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                {achievement.media_url && (
-                  <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                    <img 
-                      src={achievement.media_url} 
-                      alt={achievement.title} 
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  </div>
-                )}
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-2">
-                    <Badge className={getTypeColor(achievement.type)}>
-                      {achievement.type}
-                    </Badge>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(achievement.status)}
-                      <Badge className={getStatusColor(achievement.status)}>
-                        {achievement.status}
-                      </Badge>
+          <div className="space-y-4">
+            {achievements.map((achievement) => {
+              const typeColors = getTypeColor(achievement.type);
+              
+              return (
+                <div 
+                  key={achievement.id}
+                  className="group relative overflow-hidden transition-all hover:shadow-2xl"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '16px',
+                  }}
+                >
+                  {/* Colored accent bar on left */}
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1.5 transition-all group-hover:w-2"
+                    style={{ backgroundColor: typeColors.accent }}
+                  />
+
+                  <div className="flex flex-col md:flex-row gap-6 p-6 pl-8">
+                    {/* Image Section */}
+                    {achievement.media_url && (
+                      <div 
+                        className="relative w-full md:w-64 h-48 md:h-40 flex-shrink-0 overflow-hidden group/img cursor-pointer"
+                        style={{
+                          borderRadius: '12px',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        }}
+                      >
+                        <img 
+                          src={achievement.media_url} 
+                          alt={achievement.title} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110"
+                        />
+                        <div 
+                          className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center"
+                          style={{
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            backdropFilter: 'blur(2px)'
+                          }}
+                        >
+                          <span className="text-white text-sm font-semibold">View Full Size</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Content Section */}
+                    <div className="flex-1 min-w-0">
+                      {/* Top Row: Status and Type */}
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <span
+                          className="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide"
+                          style={{
+                            backgroundColor: typeColors.bg,
+                            color: typeColors.text
+                          }}
+                        >
+                          {achievement.type}
+                        </span>
+                        {getStatusBadge(achievement.status)}
+                        {achievement.is_featured && (
+                          <div 
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                            style={{ backgroundColor: '#fef3c7', color: '#f59e0b' }}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Featured
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h3 
+                        className="text-2xl font-bold mb-2 transition-colors group-hover:text-[#3271f0]"
+                        style={{ 
+                          color: '#1a202c',
+                          fontFamily: '"Inter", sans-serif',
+                          lineHeight: '1.3'
+                        }}
+                      >
+                        {achievement.title}
+                      </h3>
+
+                      {/* Short Description */}
+                      <p 
+                        className="text-base mb-4 leading-relaxed"
+                        style={{ color: '#4a5568' }}
+                      >
+                        {achievement.short_description}
+                      </p>
+
+                      {/* Full Description - Expandable */}
+                      <p 
+                        className="text-sm mb-4 leading-relaxed line-clamp-2"
+                        style={{ color: '#718096' }}
+                      >
+                        {achievement.description}
+                      </p>
+
+                      {/* Bottom Row: Tags and Date */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Tags */}
+                        {achievement.tags && achievement.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {achievement.tags.map((tag, i) => (
+                              <span
+                                key={i}
+                                className="px-2.5 py-1 text-xs font-medium rounded-md transition-colors hover:bg-opacity-80"
+                                style={{
+                                  backgroundColor: '#f1f5f9',
+                                  color: '#475569',
+                                  border: '1px solid #e2e8f0'
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Date */}
+                        <div 
+                          className="flex items-center gap-2 ml-auto text-sm font-medium"
+                          style={{ color: '#718096' }}
+                        >
+                          <Calendar className="h-4 w-4" />
+                          {new Date(achievement.achievement_date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <CardTitle className="line-clamp-2">{achievement.title}</CardTitle>
-                  <CardDescription className="line-clamp-1 text-muted-foreground">
-                    {achievement.short_description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {achievement.description}
-                  </p>
-                  {achievement.tags && achievement.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {achievement.tags.slice(0, 3).map((tag, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {achievement.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{achievement.tags.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  <p className="text-sm text-muted-foreground pt-2 border-t">
-                    {new Date(achievement.achievement_date).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -26,8 +26,21 @@ type Achievement = {
   };
 };
 
+type Opportunity = {
+  id: number;
+  title: string;
+  description: string;
+  is_approved: boolean;
+  created_by: string;
+  profiles: {
+    name: string;
+    email: string;
+  };
+};
+
 export default function FacultyDashboard() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -36,6 +49,7 @@ export default function FacultyDashboard() {
   useEffect(() => {
     if (userRole === 'faculty' || userRole === 'admin') {
       fetchAchievements();
+      fetchOpportunities();
     }
   }, [userRole]);
 
@@ -68,7 +82,33 @@ export default function FacultyDashboard() {
     setLoading(false);
   };
 
-  const handleAction = async (achievementId: string, action: 'approve' | 'reject' | 'feature') => {
+  const fetchOpportunities = async () => {
+    const { data, error } = await supabase
+      .from('opportunities')
+      .select(`
+        id,
+        title,
+        description,
+        is_approved,
+        created_by,
+        profiles!created_by(name, email)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      toast.error('Failed to load opportunities');
+    } else {
+      setOpportunities(data as any);
+    }
+  };
+
+  const handleAchievementAction = async (achievementId: string, action: 'approve' | 'reject' | 'feature') => {
     setActionLoading(true);
     
     const updates: any = {};
@@ -89,7 +129,7 @@ export default function FacultyDashboard() {
       .eq('id', achievementId);
 
     if (error) {
-      toast.error('Action failed');
+      toast.error('Achievement action failed');
     } else {
       toast.success(`Achievement ${action}d successfully`);
       fetchAchievements();
@@ -99,9 +139,43 @@ export default function FacultyDashboard() {
     setActionLoading(false);
   };
 
+  const handleOpportunityAction = async (opportunityId: number, action: 'approve' | 'reject') => {
+    setActionLoading(true);
+
+    if (action === 'approve') {
+      const { error } = await supabase
+        .from('opportunities')
+        .update({ is_approved: true })
+        .eq('id', opportunityId);
+
+      if (error) {
+        toast.error('Opportunity approval failed');
+      } else {
+        toast.success('Opportunity approved successfully');
+        fetchOpportunities();
+      }
+    } else if (action === 'reject') {
+      const { error } = await supabase
+        .from('opportunities')
+        .delete()
+        .eq('id', opportunityId);
+
+      if (error) {
+        toast.error('Opportunity rejection failed');
+      } else {
+        toast.success('Opportunity rejected and deleted successfully');
+        fetchOpportunities();
+      }
+    }
+    setActionLoading(false);
+  };
+
   const pendingAchievements = achievements.filter(a => a.status === 'pending');
   const approvedAchievements = achievements.filter(a => a.status === 'approved');
   const rejectedAchievements = achievements.filter(a => a.status === 'rejected');
+
+  const pendingOpportunities = opportunities.filter(o => !o.is_approved);
+  const approvedOpportunities = opportunities.filter(o => o.is_approved);
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -161,7 +235,7 @@ export default function FacultyDashboard() {
                 size="sm"
                 variant="outline"
                 className="text-green-600 hover:text-green-700"
-                onClick={() => handleAction(achievement.id, 'approve')}
+                onClick={() => handleAchievementAction(achievement.id, 'approve')}
                 disabled={actionLoading}
               >
                 <CheckCircle className="h-3 w-3" />
@@ -170,7 +244,7 @@ export default function FacultyDashboard() {
                 size="sm"
                 variant="outline"
                 className="text-red-600 hover:text-red-700"
-                onClick={() => handleAction(achievement.id, 'reject')}
+                onClick={() => handleAchievementAction(achievement.id, 'reject')}
                 disabled={actionLoading}
               >
                 <XCircle className="h-3 w-3" />
@@ -181,13 +255,52 @@ export default function FacultyDashboard() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleAction(achievement.id, 'feature')}
+              onClick={() => handleAchievementAction(achievement.id, 'feature')}
               disabled={actionLoading}
             >
               <Star className={`h-3 w-3 ${achievement.is_featured ? 'fill-yellow-500 text-yellow-500' : ''}`} />
             </Button>
           )}
         </div>
+      </CardContent>
+    </Card>
+  );
+
+  const OpportunityCard = ({ opportunity }: { opportunity: Opportunity }) => (
+    <Card className="glass-card hover-lift">
+      <CardHeader>
+        <CardTitle className="line-clamp-1">{opportunity.title}</CardTitle>
+        <CardDescription className="line-clamp-2">{opportunity.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium">Created By:</span> {opportunity.profiles.name}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium">Status:</span> {opportunity.is_approved ? 'Approved' : 'Pending'}
+        </p>
+        {!opportunity.is_approved && (
+          <div className="flex gap-2 pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-green-600 hover:text-green-700"
+              onClick={() => handleOpportunityAction(opportunity.id, 'approve')}
+              disabled={actionLoading}
+            >
+              <CheckCircle className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-red-600 hover:text-red-700"
+              onClick={() => handleOpportunityAction(opportunity.id, 'reject')}
+              disabled={actionLoading}
+            >
+              <XCircle className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -283,6 +396,56 @@ export default function FacultyDashboard() {
             )}
           </TabsContent>
         </Tabs>
+
+        <div className="mb-8 mt-12 animate-fade-in">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            Manage Opportunities
+          </h2>
+          <p className="text-muted-foreground">Review and manage student-posted opportunities</p>
+        </div>
+
+        <Tabs defaultValue="pending-opportunities" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="pending-opportunities">
+              Pending Opportunities ({pendingOpportunities.length})
+            </TabsTrigger>
+            <TabsTrigger value="approved-opportunities">
+              Approved Opportunities ({approvedOpportunities.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending-opportunities" className="space-y-4">
+            {pendingOpportunities.length === 0 ? (
+              <Card className="glass-card text-center py-12">
+                <CardContent>
+                  <p className="text-muted-foreground">No pending opportunities</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {pendingOpportunities.map((opportunity) => (
+                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="approved-opportunities" className="space-y-4">
+            {approvedOpportunities.length === 0 ? (
+              <Card className="glass-card text-center py-12">
+                <CardContent>
+                  <p className="text-muted-foreground">No approved opportunities</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {approvedOpportunities.map((opportunity) => (
+                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={!!selectedAchievement} onOpenChange={() => setSelectedAchievement(null)}>
@@ -338,7 +501,7 @@ export default function FacultyDashboard() {
               {selectedAchievement.status === 'pending' && (
                 <div className="flex gap-2 pt-4">
                   <Button
-                    onClick={() => handleAction(selectedAchievement.id, 'approve')}
+                    onClick={() => handleAchievementAction(selectedAchievement.id, 'approve')}
                     disabled={actionLoading}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
@@ -346,7 +509,7 @@ export default function FacultyDashboard() {
                     Approve
                   </Button>
                   <Button
-                    onClick={() => handleAction(selectedAchievement.id, 'reject')}
+                    onClick={() => handleAchievementAction(selectedAchievement.id, 'reject')}
                     disabled={actionLoading}
                     variant="destructive"
                     className="flex-1"
