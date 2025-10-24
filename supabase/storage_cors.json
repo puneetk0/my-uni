@@ -1,0 +1,9 @@
+[
+  {
+    "allowedOrigins": ["*"],
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE"],
+    "allowedHeaders": ["*"],
+    "exposeHeaders": ["Content-Length", "X-Kuma-Revision"],
+    "maxAgeSeconds": 3600
+  }
+]

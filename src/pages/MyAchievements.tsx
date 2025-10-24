@@ -12,10 +12,12 @@ import { useNavigate } from 'react-router-dom';
 type Achievement = {
   id: string;
   title: string;
+  short_description: string;
   description: string;
   type: string;
   tags: string[];
   achievement_date: string;
+  media_url?: string;
   status: 'pending' | 'approved' | 'rejected';
   is_featured: boolean;
 };
@@ -140,6 +142,15 @@ export default function MyAchievements() {
                 className="glass-card hover-lift animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
+                {achievement.media_url && (
+                  <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+                    <img 
+                      src={achievement.media_url} 
+                      alt={achievement.title} 
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  </div>
+                )}
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">
                     <Badge className={getTypeColor(achievement.type)}>
@@ -153,11 +164,14 @@ export default function MyAchievements() {
                     </div>
                   </div>
                   <CardTitle className="line-clamp-2">{achievement.title}</CardTitle>
-                  <CardDescription className="line-clamp-3">
-                    {achievement.description}
+                  <CardDescription className="line-clamp-1 text-muted-foreground">
+                    {achievement.short_description}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {achievement.description}
+                  </p>
                   {achievement.tags && achievement.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {achievement.tags.slice(0, 3).map((tag, i) => (

@@ -1,0 +1,21 @@
+
+.polaroid-card {
+  background-color: white;
+  border: 1px solid #ddd;
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 200px;
+  margin: 10px;
+}
+
+.polaroid-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.polaroid-caption {
+  margin-top: 10px;
+  font-family: 'Permanent Marker', cursive;
+}

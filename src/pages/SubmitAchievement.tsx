@@ -15,11 +15,12 @@ import { z } from 'zod';
 
 const achievementSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(200, 'Title is too long'),
+  short_description: z.string().min(3, 'Short description must be at least 3 characters').max(100, 'Short description is too long'),
   description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description is too long'),
   type: z.enum(['hackathon', 'research', 'internship', 'project', 'competition', 'other']),
   tags: z.string(),
   achievement_date: z.string().min(1, 'Achievement date is required'),
-  media_url: z.string().optional(),
+  media_url: z.string().min(1, 'Photo is required'),
 });
 
 export default function SubmitAchievement() {
@@ -28,12 +29,15 @@ export default function SubmitAchievement() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
+    short_description: '',
     description: '',
     type: '',
     tags: '',
     achievement_date: '',
     media_url: '',
   });
+
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,16 +50,36 @@ export default function SubmitAchievement() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
 
+      let mediaUrl = null;
+      if (photoFile) {
+        const filePath = `${user?.id}/${Date.now()}`;
+        const { error: uploadError } = await supabase.storage
+          .from('achievement-photos')
+          .upload(filePath, photoFile);
+
+        if (uploadError) {
+          toast.error('Failed to upload photo');
+          setLoading(false);
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('achievement-photos')
+          .getPublicUrl(filePath);
+        mediaUrl = publicUrlData.publicUrl;
+      }
+
       const { error } = await supabase
         .from('achievements')
         .insert({
           user_id: user?.id,
           title: validated.title,
+          short_description: validated.short_description,
           description: validated.description,
           type: validated.type,
           tags: tagsArray,
           achievement_date: validated.achievement_date,
-          media_url: validated.media_url || null,
+          media_url: mediaUrl,
           status: 'pending',
         });
 
@@ -109,6 +133,21 @@ export default function SubmitAchievement() {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="short_description">Short Description *</Label>
+                <Textarea
+                  id="short_description"
+                  placeholder="A short, catchy description (e.g., Won SIH 2025, Placed at Google)"
+                  value={formData.short_description}
+                  onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
+                  required
+                  maxLength={100}
+                />
+                 <p className="text-xs text-muted-foreground">
+                  {formData.short_description.length} / 100 characters
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -172,16 +211,15 @@ export default function SubmitAchievement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="media">Media URL (Optional)</Label>
+                <Label htmlFor="media">Photo *</Label>
                 <Input
                   id="media"
-                  type="url"
-                  placeholder="https://example.com/certificate.pdf"
-                  value={formData.media_url}
-                  onChange={(e) => setFormData({ ...formData, media_url: e.target.value })}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhotoFile(e.target.files ? e.target.files[0] : null)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Link to certificate, project, or related media
+                  Upload a photo of your achievement
                 </p>
               </div>
 
