@@ -16,6 +16,7 @@ type Achievement = {
   tags: string[];
   achievement_date: string;
   media_url?: string;
+  photos?: string[] | null;
   status: 'pending' | 'approved' | 'rejected';
   is_featured: boolean;
 };
@@ -36,7 +37,7 @@ export default function MyAchievements() {
     setLoading(true);
     const { data, error } = await supabase
       .from('achievements')
-      .select('*')
+      .select('id, title, short_description, description, type, tags, achievement_date, media_url, photos, status, is_featured')
       .eq('user_id', user?.id)
       .order('created_at', { ascending: false });
 
@@ -221,7 +222,7 @@ export default function MyAchievements() {
 
                   <div className="flex flex-col md:flex-row gap-6 p-6 pl-8">
                     {/* Image Section */}
-                    {achievement.media_url && (
+                    {(achievement.photos?.[0] || achievement.media_url) && (
                       <div 
                         className="relative w-full md:w-64 h-48 md:h-40 flex-shrink-0 overflow-hidden group/img cursor-pointer"
                         style={{
@@ -230,7 +231,7 @@ export default function MyAchievements() {
                         }}
                       >
                         <img 
-                          src={achievement.media_url} 
+                          src={achievement.photos?.[0] || achievement.media_url || ''} 
                           alt={achievement.title} 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110"
                         />

@@ -12,6 +12,8 @@ import SubmitAchievement from "./pages/SubmitAchievement";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import Opportunities from "./pages/Opportunities";
 import CreateOpportunity from "./pages/CreateOpportunity";
+import Profile from "./pages/Profile";
+import AchievementDetail from "./pages/AchievementDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
             <Route path="/opportunities" element={<Opportunities />} />
             <Route path="/create-opportunity" element={<CreateOpportunity />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/achievements/:id" element={<AchievementDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

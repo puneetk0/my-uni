@@ -20,9 +20,9 @@ type Achievement = {
   status: 'pending' | 'approved' | 'rejected';
   is_featured: boolean;
   media_url: string | null;
+  photos?: string[] | null;
   profiles: {
-    name: string;
-    email: string;
+    avatar_url: string | null;
   };
 };
 
@@ -33,8 +33,7 @@ type Opportunity = {
   is_approved: boolean;
   created_by: string;
   profiles: {
-    name: string;
-    email: string;
+    avatar_url: string | null;
   };
 };
 
@@ -67,10 +66,8 @@ export default function FacultyDashboard() {
         status,
         is_featured,
         media_url,
-        profiles:user_id (
-          name,
-          email
-        )
+        photos,
+        profiles!achievements_user_id_fkey(avatar_url)
       `)
       .order('created_at', { ascending: false });
 
@@ -91,7 +88,7 @@ export default function FacultyDashboard() {
         description,
         is_approved,
         created_by,
-        profiles!created_by(name, email)
+        profiles!opportunities_created_by_fkey_profiles(avatar_url)
       `)
       .order('created_at', { ascending: false });
 
@@ -205,7 +202,7 @@ export default function FacultyDashboard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          <span className="font-medium">Student:</span> {achievement.profiles.name}
+          <span className="font-medium">Student:</span> {user?.email}
         </p>
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Date:</span> {new Date(achievement.achievement_date).toLocaleDateString()}
@@ -274,7 +271,7 @@ export default function FacultyDashboard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          <span className="font-medium">Created By:</span> {opportunity.profiles.name}
+          <span className="font-medium">Created By:</span> {user?.email}
         </p>
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Status:</span> {opportunity.is_approved ? 'Approved' : 'Pending'}
@@ -453,7 +450,7 @@ export default function FacultyDashboard() {
           <DialogHeader>
             <DialogTitle>{selectedAchievement?.title}</DialogTitle>
             <DialogDescription>
-              Submitted by {selectedAchievement?.profiles.name} ({selectedAchievement?.profiles.email})
+              Submitted by {user?.email}
             </DialogDescription>
           </DialogHeader>
           {selectedAchievement && (
@@ -485,11 +482,11 @@ export default function FacultyDashboard() {
                   })}
                 </p>
               </div>
-              {selectedAchievement.media_url && (
+              {(selectedAchievement.photos?.[0] || selectedAchievement.media_url) && (
                 <div>
                   <h4 className="font-medium mb-2">Media</h4>
                   <a 
-                    href={selectedAchievement.media_url} 
+                    href={selectedAchievement.photos?.[0] || selectedAchievement.media_url || ''} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"

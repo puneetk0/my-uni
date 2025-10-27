@@ -17,6 +17,12 @@ export type Database = {
           type: string;
           user_id: string;
           verified_by: string | null;
+          how_it_started: string | null;
+          how_we_built_it: string | null;
+          what_we_achieved: string | null;
+          what_we_learned: string | null;
+          upvotes: number;
+          photos: string[] | null;
         };
         Insert: {
           achievement_date: string;
@@ -31,6 +37,12 @@ export type Database = {
           type: string;
           user_id: string;
           verified_by?: string | null;
+          how_it_started?: string | null;
+          how_we_built_it?: string | null;
+          what_we_achieved?: string | null;
+          what_we_learned?: string | null;
+          upvotes?: number;
+          photos?: string[] | null;
         };
         Update: {
           achievement_date?: string;
@@ -45,6 +57,12 @@ export type Database = {
           type?: string;
           user_id?: string;
           verified_by?: string | null;
+          how_it_started?: string | null;
+          how_we_built_it?: string | null;
+          what_we_achieved?: string | null;
+          what_we_learned?: string | null;
+          upvotes?: number;
+          photos?: string[] | null;
         };
         Relationships: [
           {
@@ -59,6 +77,205 @@ export type Database = {
             columns: ["verified_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      achievement_teams: {
+        Row: {
+          id: string;
+          achievement_id: string;
+          user_id: string;
+          role: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          achievement_id: string;
+          user_id: string;
+          role?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          achievement_id?: string;
+          user_id?: string;
+          role?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "achievement_teams_achievement_id_fkey";
+            columns: ["achievement_id"];
+            isOneToOne: false;
+            referencedRelation: "achievements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "achievement_teams_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      achievement_comments: {
+        Row: {
+          id: number;
+          achievement_id: string;
+          user_id: string;
+          body: string;
+          parent_id: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          achievement_id: string;
+          user_id: string;
+          body: string;
+          parent_id?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          achievement_id?: string;
+          user_id?: string;
+          body?: string;
+          parent_id?: number | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "achievement_comments_achievement_id_fkey";
+            columns: ["achievement_id"];
+            isOneToOne: false;
+            referencedRelation: "achievements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "achievement_comments_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "achievement_comments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "achievement_comments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "achievement_comments_user_id_fkey_profiles";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      achievement_upvotes: {
+        Row: {
+          achievement_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          achievement_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          achievement_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "achievement_upvotes_achievement_id_fkey";
+            columns: ["achievement_id"];
+            isOneToOne: false;
+            referencedRelation: "achievements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "achievement_upvotes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      achievement_photos: {
+        Row: {
+          id: number;
+          achievement_id: string;
+          storage_path: string;
+          public_url: string;
+          sort_index: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          achievement_id: string;
+          storage_path: string;
+          public_url: string;
+          sort_index?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          achievement_id?: string;
+          storage_path?: string;
+          public_url?: string;
+          sort_index?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "achievement_photos_achievement_id_fkey";
+            columns: ["achievement_id"];
+            isOneToOne: false;
+            referencedRelation: "achievements";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      achievement_teammates: {
+        Row: {
+          achievement_id: string;
+          user_id: string;
+          role: string | null;
+          created_at: string;
+        };
+        Insert: {
+          achievement_id: string;
+          user_id: string;
+          role?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          achievement_id?: string;
+          user_id?: string;
+          role?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "achievement_teammates_achievement_id_fkey";
+            columns: ["achievement_id"];
+            isOneToOne: false;
+            referencedRelation: "achievements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "achievement_teammates_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
         ];
@@ -108,26 +325,21 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null;
-          full_name: string | null;
           id: string;
           updated_at: string | null;
-          username: string | null;
           website: string | null;
+          department: string | null;
         };
         Insert: {
           avatar_url?: string | null;
-          full_name?: string | null;
           id: string;
           updated_at?: string | null;
-          username?: string | null;
           website?: string | null;
         };
         Update: {
           avatar_url?: string | null;
-          full_name?: string | null;
           id?: string;
           updated_at?: string | null;
-          username?: string | null;
           website?: string | null;
         };
         Relationships: [

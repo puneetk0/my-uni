@@ -20,6 +20,10 @@ const achievementSchema = z.object({
   type: z.enum(['hackathon', 'research', 'internship', 'project', 'competition', 'other']),
   tags: z.string(),
   achievement_date: z.string().min(1, 'Achievement date is required'),
+  how_it_started: z.string().optional(),
+  how_we_built_it: z.string().optional(),
+  what_we_achieved: z.string().optional(),
+  what_we_learned: z.string().optional(),
 });
 
 export default function SubmitAchievement() {
@@ -33,36 +37,46 @@ export default function SubmitAchievement() {
     type: '',
     tags: '',
     achievement_date: '',
+    how_it_started: '',
+    how_we_built_it: '',
+    what_we_achieved: '',
+    what_we_learned: '',
   });
 
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files ? e.target.files[0] : null;
-    setPhotoFile(file);
-    
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setPhotoPreview(null);
-    }
-  };
-
-  const removePhoto = () => {
-    setPhotoFile(null);
-    setPhotoPreview(null);
-  };
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
   // Parse tags from input
   const parsedTags = formData.tags
     .split(',')
     .map(tag => tag.trim())
     .filter(tag => tag.length > 0);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (photoFiles.length + files.length > 5) {
+      toast.error('You can upload a maximum of 5 photos.');
+      return;
+    }
+    setPhotoFiles(prev => [...prev, ...files]);
+
+    const newPreviews: string[] = [];
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string);
+        if (newPreviews.length === files.length) {
+          setPhotoPreviews(prev => [...prev, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotoFiles(prev => prev.filter((_, i) => i !== index));
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,26 +89,28 @@ export default function SubmitAchievement() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
 
-      let mediaUrl: string | null = null;
+      const uploadedPhotoUrls: string[] = [];
 
-      if (photoFile) {
-        const filePath = `${user?.id}/${Date.now()}`;
-        const { error: uploadError } = await supabase.storage
-          .from('achievement-photos')
-          .upload(filePath, photoFile);
+      if (photoFiles.length > 0) {
+        for (const file of photoFiles) {
+          const filePath = `${user?.id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('achievement-photos')
+            .upload(filePath, file);
 
-        if (uploadError) {
-          toast.error('Failed to upload photo');
-          setLoading(false);
-          return;
+          if (uploadError) {
+            toast.error(`Failed to upload photo: ${file.name}`);
+            setLoading(false);
+            return;
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from('achievement-photos')
+            .getPublicUrl(filePath);
+          uploadedPhotoUrls.push(publicUrlData.publicUrl);
         }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('achievement-photos')
-          .getPublicUrl(filePath);
-        mediaUrl = publicUrlData.publicUrl;
       } else {
-        toast.error('Photo is required');
+        toast.error('At least one photo is required.');
         setLoading(false);
         return;
       }
@@ -109,7 +125,11 @@ export default function SubmitAchievement() {
           type: validatedFormData.type,
           tags: tagsArray,
           achievement_date: validatedFormData.achievement_date,
-          media_url: mediaUrl,
+          how_it_started: validatedFormData.how_it_started || null,
+          how_we_built_it: validatedFormData.how_we_built_it || null,
+          what_we_achieved: validatedFormData.what_we_achieved || null,
+          what_we_learned: validatedFormData.what_we_learned || null,
+          photos: uploadedPhotoUrls,
           status: 'pending',
         });
 
@@ -181,40 +201,32 @@ export default function SubmitAchievement() {
                   className="text-sm font-semibold"
                   style={{ color: '#2d3748' }}
                 >
-                  Achievement Photo
+                  Achievement Photos (Max 5)
                 </Label>
                 
-                {photoPreview ? (
-                  <div 
-                    className="relative rounded-xl overflow-hidden"
-                    style={{
-                      maxWidth: '400px',
-                      margin: '0'
-                    }}
-                  >
-                    <img 
-                      src={photoPreview} 
-                      alt="Preview" 
-                      className="w-full h-auto"
-                      style={{
-                        borderRadius: '12px',
-                        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
-                        maxHeight: '300px',
-                        objectFit: 'cover'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={removePhoto}
-                      className="absolute top-3 right-3 p-1.5 rounded-full bg-white/95 backdrop-blur-sm hover:bg-white transition-all"
-                      style={{
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-                      }}
-                    >
-                      <X className="h-4 w-4" style={{ color: '#e53e3e' }} />
-                    </button>
+                {photoPreviews.length > 0 && (
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    {photoPreviews.map((preview, index) => (
+                      <div key={index} className="relative w-32 h-32 rounded-xl overflow-hidden shadow-md">
+                        <img 
+                          src={preview} 
+                          alt={`Preview ${index + 1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-white/95 backdrop-blur-sm hover:bg-white transition-all"
+                          style={{ boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1)' }}
+                        >
+                          <X className="h-3 w-3" style={{ color: '#e53e3e' }} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ) : (
+                )}
+
+                {photoFiles.length < 5 && (
                   <div 
                     className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all hover:border-[#3271f0] hover:bg-blue-50/30 group"
                     style={{ 
@@ -236,13 +248,13 @@ export default function SubmitAchievement() {
                       className="text-sm font-semibold mb-1"
                       style={{ color: '#2d3748' }}
                     >
-                      Click to upload your achievement photo
+                      Click to upload photos (up to 5)
                     </p>
                     <p 
                       className="text-xs"
                       style={{ color: '#a0aec0' }}
                     >
-                      PNG, JPG, JPEG up to 10MB
+                      PNG, JPG, JPEG up to 10MB each
                     </p>
                   </div>
                 )}
@@ -250,6 +262,7 @@ export default function SubmitAchievement() {
                   id="media"
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
@@ -331,6 +344,98 @@ export default function SubmitAchievement() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={5}
                   required
+                  className="border-gray-200 focus:border-[#3271f0] focus:ring-[#3271f0] resize-none"
+                  style={{ 
+                    borderRadius: '10px',
+                    fontSize: '0.95rem'
+                  }}
+                />
+              </div>
+
+              {/* How it started */}
+              <div className="space-y-2">
+                <Label 
+                  htmlFor="how_it_started"
+                  className="text-sm font-semibold"
+                  style={{ color: '#2d3748' }}
+                >
+                  How it started
+                </Label>
+                <Textarea
+                  id="how_it_started"
+                  placeholder="Describe the initial idea, problem, or inspiration."
+                  value={formData.how_it_started}
+                  onChange={(e) => setFormData({ ...formData, how_it_started: e.target.value })}
+                  rows={3}
+                  className="border-gray-200 focus:border-[#3271f0] focus:ring-[#3271f0] resize-none"
+                  style={{ 
+                    borderRadius: '10px',
+                    fontSize: '0.95rem'
+                  }}
+                />
+              </div>
+
+              {/* How we built it */}
+              <div className="space-y-2">
+                <Label 
+                  htmlFor="how_we_built_it"
+                  className="text-sm font-semibold"
+                  style={{ color: '#2d3748' }}
+                >
+                  How we built it
+                </Label>
+                <Textarea
+                  id="how_we_built_it"
+                  placeholder="Explain the process, technologies used, and challenges faced during development."
+                  value={formData.how_we_built_it}
+                  onChange={(e) => setFormData({ ...formData, how_we_built_it: e.target.value })}
+                  rows={3}
+                  className="border-gray-200 focus:border-[#3271f0] focus:ring-[#3271f0] resize-none"
+                  style={{ 
+                    borderRadius: '10px',
+                    fontSize: '0.95rem'
+                  }}
+                />
+              </div>
+
+              {/* What we achieved */}
+              <div className="space-y-2">
+                <Label 
+                  htmlFor="what_we_achieved"
+                  className="text-sm font-semibold"
+                  style={{ color: '#2d3748' }}
+                >
+                  What we achieved
+                </Label>
+                <Textarea
+                  id="what_we_achieved"
+                  placeholder="Summarize the outcomes, impact, and results of your achievement."
+                  value={formData.what_we_achieved}
+                  onChange={(e) => setFormData({ ...formData, what_we_achieved: e.target.value })}
+                  rows={3}
+                  className="border-gray-200 focus:border-[#3271f0] focus:ring-[#3271f0] resize-none"
+                  style={{ 
+                    borderRadius: '10px',
+                    fontSize: '0.95rem'
+                  }}
+                />
+              </div>
+
+              {/* What we learned */}
+              <div className="space-y-2">
+                <Label 
+                  htmlFor="what_we_learned"
+                  className="text-sm font-semibold"
+                  style={{ color: '#2d3748' }}
+                >
+                  What we learned
+                </Label>
+                <Textarea
+                  id="what_we_learned"
+                  placeholder="Reflect on the key takeaways, skills gained, and personal growth."
+                  value={formData.what_we_learned}
+                  onChange={(e) => setFormData({ ...formData, what_we_learned: e.target.value })}
+                  rows={3}
                   className="border-gray-200 focus:border-[#3271f0] focus:ring-[#3271f0] resize-none"
                   style={{ 
                     borderRadius: '10px',

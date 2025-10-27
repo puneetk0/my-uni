@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Award, Sparkles, LayoutDashboard, LogOut, Trophy } from 'lucide-react';
+import { Award, Sparkles, LayoutDashboard, LogOut, Trophy, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
@@ -194,6 +194,12 @@ export function Navbar() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }} />
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-purple-50 transition-colors rounded-lg py-2.5">
+                        <Trophy className="mr-2.5 h-4 w-4 text-purple-500" />
+                        <span className="font-medium">My Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={signOut} 
                       className="cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-red-50 transition-colors rounded-lg mt-1 py-2.5"

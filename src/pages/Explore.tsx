@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
-import { Badge } from '@/components/ui/badge';
+import { Filter, Trophy, Sparkles, Star, User, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Calendar, User, Filter, Star, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Achievement = {
   id: string;
@@ -15,16 +15,14 @@ type Achievement = {
   achievement_date: string;
   is_featured: boolean;
   media_url?: string;
-  profiles: {
-    name: string;
-    email: string;
-  };
+  photos?: string[] | null;
 };
 
 export default function Explore() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchAchievements();
@@ -43,10 +41,7 @@ export default function Explore() {
         achievement_date,
         is_featured,
         media_url,
-        profiles:user_id (
-          name,
-          email
-        )
+        photos
       `)
       .eq('status', 'approved')
       .order('is_featured', { ascending: false })
@@ -61,7 +56,7 @@ export default function Explore() {
     if (error) {
       toast.error('Failed to load achievements');
     } else {
-      setAchievements(data as any);
+      setAchievements(data as Achievement[]);
     }
     setLoading(false);
   };
@@ -181,7 +176,10 @@ export default function Explore() {
             </div>
             <h3 
               className="text-xl font-bold mb-3"
-              style={{ color: '#1a202c', fontFamily: '"Inter", sans-serif' }}
+              style={{
+                color: '#1a202c',
+                fontFamily: '"Inter", sans-serif'
+              }}
             >
               No achievements found
             </h3>
@@ -237,10 +235,10 @@ export default function Explore() {
                         </div>
 
                         {/* Image */}
-                        {achievement.media_url && (
+                        {(achievement.photos?.[0] || achievement.media_url) && (
                           <div className="relative h-56 overflow-hidden">
                             <img 
-                              src={achievement.media_url} 
+                              src={achievement.photos?.[0] || achievement.media_url || ''} 
                               alt={achievement.title}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
@@ -312,11 +310,11 @@ export default function Explore() {
                               color: '#718096'
                             }}
                           >
-                            <div className="flex items-center gap-1.5">
-                              <User className="h-3.5 w-3.5" />
-                              <span className="font-medium">{achievement.profiles.name}</span>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <User className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="font-medium truncate">{user?.email || 'Anonymous'}</span>
                             </div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
                               <Calendar className="h-3.5 w-3.5" />
                               <span>{new Date(achievement.achievement_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
                             </div>
@@ -359,10 +357,10 @@ export default function Explore() {
                         }}
                       >
                         {/* Image */}
-                        {achievement.media_url && (
+                        {(achievement.photos?.[0] || achievement.media_url) && (
                           <div className="relative h-44 overflow-hidden">
                             <img 
-                              src={achievement.media_url} 
+                              src={achievement.photos?.[0] || achievement.media_url || ''} 
                               alt={achievement.title}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
@@ -447,7 +445,7 @@ export default function Explore() {
                           >
                             <div className="flex items-center gap-1.5 truncate">
                               <User className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span className="font-medium truncate">{achievement.profiles.name}</span>
+                              <span className="font-medium truncate">{user?.email || 'Anonymous'}</span>
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <Calendar className="h-3.5 w-3.5" />
