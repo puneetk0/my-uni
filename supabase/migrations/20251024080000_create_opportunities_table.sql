@@ -1,0 +1,8 @@
+CREATE TABLE opportunities (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_approved BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
