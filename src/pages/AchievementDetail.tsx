@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { CheckCircle, XCircle, Clock, CalendarDays, ThumbsUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateConciseSummary } from '@/lib/gemini';
 
 type Achievement = {
   id: string;
@@ -56,11 +57,22 @@ export default function AchievementDetail() {
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [upvoted, setUpvoted] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState<boolean>(false);
+  const [showFull, setShowFull] = useState<boolean>(false);
 
+  // Load main content only when the route id changes
   useEffect(() => {
     if (id) {
       fetchAchievementDetails();
       fetchComments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Check upvote status when user or id changes (no loading spinner)
+  useEffect(() => {
+    if (id) {
       checkUpvoteStatus();
     }
   }, [id, user]);
@@ -97,6 +109,24 @@ export default function AchievementDetail() {
       console.error('Error fetching achievement:', error);
     } else {
       setAchievement(data as any);
+
+      // Generate a concise, readable summary via Gemini
+      try {
+        setSummaryLoading(true);
+        const concise = await generateConciseSummary({
+          title: data.title,
+          description: data.description || '',
+          how_it_started: data.how_it_started,
+          how_we_built_it: data.how_we_built_it,
+          what_we_achieved: data.what_we_achieved,
+          what_we_learned: data.what_we_learned,
+        });
+        setSummary(concise);
+      } catch (e) {
+        console.error('Failed to generate Gemini summary', e);
+      } finally {
+        setSummaryLoading(false);
+      }
     }
     setLoading(false);
   };
@@ -149,7 +179,7 @@ export default function AchievementDetail() {
         .eq('user_id', user.id);
 
       if (error) {
-        toast.error('Failed to remove upvote');
+        toast.error(`Failed to remove upvote: ${error.message}`);
       } else {
         setUpvoted(false);
         setAchievement(prev => prev ? { ...prev, upvotes: prev.upvotes - 1 } : null);
@@ -160,7 +190,7 @@ export default function AchievementDetail() {
         .insert({ achievement_id: id, user_id: user.id });
 
       if (error) {
-        toast.error('Failed to add upvote');
+        toast.error(`Failed to add upvote: ${error.message}`);
       } else {
         setUpvoted(true);
         setAchievement(prev => prev ? { ...prev, upvotes: prev.upvotes + 1 } : null);
@@ -179,7 +209,7 @@ export default function AchievementDetail() {
       .insert({ achievement_id: id, user_id: user.id, body: newComment.trim() });
 
     if (error) {
-      toast.error('Failed to post comment');
+      toast.error(`Failed to post comment: ${error.message}`);
     } else {
       setNewComment('');
       fetchComments();
@@ -206,9 +236,10 @@ export default function AchievementDetail() {
         <div
           className="absolute inset-0 -z-10"
           style={{
-            backgroundColor: '#fafafa',
-            backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)',
-            backgroundSize: '32px 32px'
+            backgroundColor: '#faf8f5',
+            backgroundImage:
+              'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px)',
+            backgroundSize: '50px 50px'
           }}
         />
         <div className="container mx-auto p-4 text-center" style={{ color: '#6b7280' }}>Loading achievement...</div>
@@ -223,9 +254,10 @@ export default function AchievementDetail() {
         <div
           className="absolute inset-0 -z-10"
           style={{
-            backgroundColor: '#fafafa',
-            backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)',
-            backgroundSize: '32px 32px'
+            backgroundColor: '#faf8f5',
+            backgroundImage:
+              'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px)',
+            backgroundSize: '50px 50px'
           }}
         />
         <div className="container mx-auto p-4 text-center" style={{ color: '#6b7280' }}>Achievement not found.</div>
@@ -239,13 +271,14 @@ export default function AchievementDetail() {
       <div
         className="absolute inset-0 -z-10"
         style={{
-          backgroundColor: '#fafafa',
-          backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)',
-          backgroundSize: '32px 32px'
+          backgroundColor: '#faf8f5',
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px)',
+          backgroundSize: '50px 50px'
         }}
       />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="glass-card shadow-lg mb-8">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <Card className="bg-white rounded-[28px] shadow-sm border border-slate-100 mb-8">
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
               <CardTitle className="text-3xl font-bold">{achievement.title}</CardTitle>
@@ -266,19 +299,13 @@ export default function AchievementDetail() {
               <span>{new Date(achievement.achievement_date).toLocaleDateString()}</span>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
             {achievement.photos && achievement.photos.length > 0 && (
-              <Carousel className="w-full max-w-xs mx-auto">
+              <Carousel className="w-full rounded-xl overflow-hidden">
                 <CarouselContent>
                   {achievement.photos.map((photo, index) => (
-                    <CarouselItem key={index}>
-                      <div className="p-1">
-                        <Card>
-                          <CardContent className="flex aspect-square items-center justify-center p-6">
-                            <img src={photo} alt={`Achievement photo ${index + 1}`} className="object-cover w-full h-full rounded-md" />
-                          </CardContent>
-                        </Card>
-                      </div>
+                    <CarouselItem key={index} className="aspect-video">
+                      <img src={photo} alt={`Achievement photo ${index + 1}`} className="object-cover w-full h-full" />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
@@ -303,32 +330,53 @@ export default function AchievementDetail() {
               ))}
             </div>
 
-            {achievement.description && (
+            {/* AI Summary */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Summary</h3>
+              {summaryLoading ? (
+                <p className="text-muted-foreground">Generating concise summary…</p>
+              ) : summary ? (
+                <div className="space-y-3 text-muted-foreground">
+                  {summary.split('\n').filter(Boolean).map((p, i) => (
+                    <p key={i} className="leading-relaxed">{p}</p>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No summary available.</p>
+              )}
+              <div className="mt-4">
+                <Button variant="outline" onClick={() => setShowFull((s) => !s)}>
+                  {showFull ? 'Hide full details' : 'View full details'}
+                </Button>
+              </div>
+            </div>
+
+            {showFull && achievement.description && (
               <div>
                 <h3 className="text-xl font-semibold mb-2">Description</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap">{achievement.description}</p>
               </div>
             )}
 
-            {achievement.how_it_started && (
+            {showFull && achievement.how_it_started && (
               <div>
                 <h3 className="text-xl font-semibold mb-2">How it started</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap">{achievement.how_it_started}</p>
               </div>
             )}
-            {achievement.how_we_built_it && (
+            {showFull && achievement.how_we_built_it && (
               <div>
                 <h3 className="text-xl font-semibold mb-2">How we built it</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap">{achievement.how_we_built_it}</p>
               </div>
             )}
-            {achievement.what_we_achieved && (
+            {showFull && achievement.what_we_achieved && (
               <div>
                 <h3 className="text-xl font-semibold mb-2">What we achieved</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap">{achievement.what_we_achieved}</p>
               </div>
             )}
-            {achievement.what_we_learned && (
+            {showFull && achievement.what_we_learned && (
               <div>
                 <h3 className="text-xl font-semibold mb-2">What we learned</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap">{achievement.what_we_learned}</p>
@@ -337,38 +385,60 @@ export default function AchievementDetail() {
 
             <div>
               <h3 className="text-xl font-semibold mb-4">Comments</h3>
+
+              {/* Compose box */}
+              {user && (
+                <div className="flex items-start gap-3 mb-6">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                      <Textarea
+                        placeholder="Write a thoughtful comment..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        rows={3}
+                        className="rounded-lg border-gray-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 resize-none"
+                      />
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          onClick={handlePostComment}
+                          className="px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                        >
+                          Post
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* List */}
               <div className="space-y-4">
                 {comments.length === 0 ? (
-                  <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+                  <div className="text-center py-8 text-muted-foreground">No comments yet. Be the first to comment!</div>
                 ) : (
-                  comments.map(comment => (
-                    <div key={comment.id} className="flex items-start space-x-3">
-                      <Avatar className="h-8 w-8">
+                  comments.map((comment) => (
+                    <div key={comment.id} className="flex items-start gap-3">
+                      <Avatar className="h-9 w-9">
                         <AvatarImage src={comment.profiles?.avatar_url || undefined} />
                         <AvatarFallback>{comment.profiles?.name?.charAt(0) || 'U'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-semibold">{comment.profiles?.name || 'Anonymous'}</span>
-                          <span className="text-xs text-muted-foreground">{new Date(comment.created_at).toLocaleString()}</span>
+                        <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-900">{comment.profiles?.name || 'Anonymous'}</span>
+                            <span className="text-xs text-gray-500">{new Date(comment.created_at).toLocaleString()}</span>
+                          </div>
+                          <p className="text-gray-700 leading-relaxed">{comment.body}</p>
                         </div>
-                        <p className="text-muted-foreground">{comment.body}</p>
                       </div>
                     </div>
                   ))
                 )}
               </div>
-              {user && (
-                <div className="mt-6 flex space-x-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={2}
-                  />
-                  <Button onClick={handlePostComment}>Post</Button>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>

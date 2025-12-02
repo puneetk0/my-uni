@@ -137,7 +137,7 @@ export default function SubmitAchievement() {
         toast.error('Failed to submit achievement');
       } else {
         toast.success('Achievement submitted successfully! Awaiting approval.');
-        navigate('/my-achievements');
+        navigate('/profile');
       }
     } catch (error) {
       if (error instanceof z.ZodError) {

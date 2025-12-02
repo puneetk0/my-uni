@@ -196,8 +196,19 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen outer-green-bg">
+    <div className="min-h-screen relative">
       <Navbar />
+      
+      {/* Background */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          backgroundColor: '#faf8f5',
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(50, 113, 240, 0.03) 49px, rgba(50, 113, 240, 0.03) 50px)',
+          backgroundSize: '50px 50px'
+        }}
+      />
 
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="bg-white rounded-[28px] shadow-sm border border-slate-100 p-6 md:p-8 mb-8">

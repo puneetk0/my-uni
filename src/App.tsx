@@ -7,7 +7,6 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Explore from "./pages/Explore";
-import MyAchievements from "./pages/MyAchievements";
 import SubmitAchievement from "./pages/SubmitAchievement";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import Opportunities from "./pages/Opportunities";
@@ -29,7 +28,6 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/explore" element={<Explore />} />
-            <Route path="/my-achievements" element={<MyAchievements />} />
             <Route path="/submit" element={<SubmitAchievement />} />
             <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
             <Route path="/opportunities" element={<Opportunities />} />

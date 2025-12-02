@@ -31,7 +31,6 @@ export function Navbar() {
 
   const navItems = [
     { label: 'Explore', path: '/explore' },
-    { label: 'My Achievements', path: '/my-achievements' },
     { label: 'Opportunities', path: '/opportunities' },
   ];
 

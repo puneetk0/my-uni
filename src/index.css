@@ -7,6 +7,19 @@ All colors MUST be HSL.
 */
 
 @layer base {
+  /* Reset default list styles */
+  ul, ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  /* Reset default link styles */
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
   :root {
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
