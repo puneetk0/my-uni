@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
+import { Button } from '@/components/ui/button';
 import { Filter, User, Calendar, Search, Award } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -108,6 +109,11 @@ export default function Explore() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Explore inspiring accomplishments from our community members and celebrate their success stories
           </p>
+          <div className="mt-6">
+            <Link to="/submit">
+              <Button className="px-6 py-6 h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700">Submit Achievement</Button>
+            </Link>
+          </div>
         </div>
 
         {/* Filter Section */}

@@ -615,13 +615,8 @@ const CreateOpportunity = () => {
                 </div>
               </div>
 
-              {/* AI & Submit */}
+              {/* Submit */}
               <div className="pt-4">
-                <div className="flex gap-3 mb-3">
-                  <Button type="button" variant="outline" onClick={handleAISuggest} disabled={!formData.title || !formData.description}>
-                    Generate with AI
-                  </Button>
-                </div>
                 <Button
                   type="submit"
                   disabled={loading}
