@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env';
 import { connectMongo } from './db/mongoose';
@@ -14,10 +14,21 @@ async function main() {
 
   const app = express();
   app.use(helmet());
-app.use(cors({ 
-  origin: [env.CORS_ORIGIN], // Allow both origins
-  credentials: true 
-}));
+
+  const whitelist = (process.env.CORS_ORIGINS || env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+  const corsOptions: CorsOptions = {
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow non-browser clients
+      if (whitelist.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+    // Let cors package reflect requested headers by default
+    optionsSuccessStatus: 204
+  };
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
