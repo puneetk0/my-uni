@@ -15,7 +15,7 @@ async function main() {
   const app = express();
   app.use(helmet());
 app.use(cors({ 
-  origin: ['http://localhost:8081', 'http://localhost:5173'], // Allow both origins
+  origin: [env.CORS_ORIGIN], // Allow both origins
   credentials: true 
 }));
   app.use(express.json({ limit: '1mb' }));
