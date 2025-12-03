@@ -16,10 +16,19 @@ async function main() {
   app.use(helmet());
 
   const whitelist = (process.env.CORS_ORIGINS || env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+  const exacts = new Set(whitelist.filter(v => !v.startsWith('*.')));
+  const wildcards = whitelist.filter(v => v.startsWith('*.')).map(v => v.slice(1)); // '*.vercel.app' -> '.vercel.app'
+
+  const isAllowedOrigin = (origin: string) => {
+    if (exacts.has(origin)) return true;
+    // Match wildcard suffixes: e.g., origin ends with '.vercel.app'
+    return wildcards.some(suffix => origin.endsWith(suffix));
+  };
   const corsOptions: CorsOptions = {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true); // allow non-browser clients
-      if (whitelist.includes(origin)) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      console.warn(`[CORS] Blocked origin: ${origin}. Allowed: ${whitelist.join(', ')}`);
       return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
