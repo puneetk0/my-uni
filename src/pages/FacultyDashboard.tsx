@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, XCircle, Star, Eye, Building2, Clock, MapPin, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { apiListPendingAchievements, apiReviewAchievement, apiListPendingOpportunities, apiReviewOpportunity, apiListOpportunities, apiListAchievements } from '@/lib/apiClient';
 
 type Achievement = {
   id: string;
@@ -34,7 +34,7 @@ interface OrganizerInfo {
 }
 
 type Opportunity = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   short_description?: string;
@@ -50,7 +50,7 @@ type Opportunity = {
   type?: string;
   status?: string;
   is_approved: boolean;
-  created_by: string;
+  created_by?: string;
   created_at: string;
   profiles?: {
     avatar_url: string | null;
@@ -74,115 +74,102 @@ export default function FacultyDashboard() {
 
   const fetchAchievements = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('achievements')
-      .select(`
-        id,
-        title,
-        description,
-        type,
-        tags,
-        achievement_date,
-        status,
-        is_featured,
-        media_url,
-        photos,
-        profiles!achievements_user_id_fkey(avatar_url)
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      const [pending, approved, rejected] = await Promise.all([
+        apiListPendingAchievements(),
+        apiListAchievements({ status: 'approved' }),
+        apiListAchievements({ status: 'rejected' }),
+      ]);
 
-    if (error) {
+      const mapAch = (arr: any[]): Achievement[] => (arr || []).map((a: any) => ({
+        id: String(a._id),
+        title: a.title,
+        description: a.description || a.shortDescription || '',
+        type: a.type || 'other',
+        tags: a.tags || [],
+        achievement_date: a.achievementDate,
+        status: a.status,
+        is_featured: a.isFeatured,
+        media_url: a.mediaUrl || null,
+        photos: a.photos || [],
+        profiles: { avatar_url: null },
+      }));
+
+      setAchievements([ ...mapAch(pending), ...mapAch(approved), ...mapAch(rejected) ]);
+    } catch (e) {
       toast.error('Failed to load achievements');
-    } else {
-      setAchievements(data as any);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchOpportunities = async () => {
-    const { data, error } = await supabase
-      .from('opportunities')
-      .select(`
-        id,
-        title,
-        description,
-        is_approved,
-        created_by,
-        profiles!opportunities_created_by_fkey_profiles(avatar_url)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Supabase error:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
+    try {
+      const [pending, approved] = await Promise.all([
+        apiListPendingOpportunities(),
+        apiListOpportunities(),
+      ]);
+      const mapOpp = (arr: any[]): Opportunity[] => (arr || []).map((o: any) => ({
+        id: String(o._id),
+        title: o.title,
+        description: o.description,
+        short_description: o.shortDescription,
+        thumbnail_url: o.thumbnailUrl,
+        tags: o.tags || [],
+        deadline: o.deadline,
+        location: o.location,
+        eligibility: o.eligibility,
+        organizer_info: { name: o.organization || '' },
+        apply_url: o.applyUrl,
+        details_url: o.detailsUrl,
+        join_team_url: o.joinTeamUrl,
+        type: o.type || 'other',
+        status: o.status,
+        is_approved: o.status === 'approved',
+        created_by: o.createdBy,
+        created_at: o.createdAt,
+        profiles: { avatar_url: null },
+      }));
+      setOpportunities([ ...mapOpp(pending), ...mapOpp(approved) ]);
+    } catch (e) {
       toast.error('Failed to load opportunities');
-    } else {
-      setOpportunities(data as any);
     }
   };
 
   const handleAchievementAction = async (achievementId: string, action: 'approve' | 'reject' | 'feature') => {
     setActionLoading(true);
 
-    const updates: any = {};
-
-    if (action === 'approve') {
-      updates.status = 'approved';
-      updates.verified_by = user?.id;
-    } else if (action === 'reject') {
-      updates.status = 'rejected';
-    } else if (action === 'feature') {
-      const achievement = achievements.find(a => a.id === achievementId);
-      updates.is_featured = !achievement?.is_featured;
-    }
-
-    const { error } = await supabase
-      .from('achievements')
-      .update(updates)
-      .eq('id', achievementId);
-
-    if (error) {
-      toast.error('Achievement action failed');
-    } else {
+    try {
+      if (action === 'approve') {
+        await apiReviewAchievement(achievementId, { status: 'approved' });
+      } else if (action === 'reject') {
+        await apiReviewAchievement(achievementId, { status: 'rejected' });
+      } else if (action === 'feature') {
+        toast.info('Feature toggle not implemented yet');
+      }
       toast.success(`Achievement ${action}d successfully`);
-      fetchAchievements();
+      await fetchAchievements();
       setSelectedAchievement(null);
+    } catch {
+      toast.error('Achievement action failed');
     }
 
     setActionLoading(false);
   };
 
-  const handleOpportunityAction = async (opportunityId: number, action: 'approve' | 'reject') => {
+  const handleOpportunityAction = async (opportunityId: string, action: 'approve' | 'reject') => {
     setActionLoading(true);
-
-    if (action === 'approve') {
-      const { error } = await supabase
-        .from('opportunities')
-        .update({ is_approved: true })
-        .eq('id', opportunityId);
-
-      if (error) {
-        toast.error('Opportunity approval failed');
-      } else {
+    try {
+      if (action === 'approve') {
+        await apiReviewOpportunity(opportunityId, { status: 'approved' });
         toast.success('Opportunity approved successfully');
-        fetchOpportunities();
-      }
-    } else if (action === 'reject') {
-      const { error } = await supabase
-        .from('opportunities')
-        .delete()
-        .eq('id', opportunityId);
-
-      if (error) {
-        toast.error('Opportunity rejection failed');
       } else {
-        toast.success('Opportunity rejected and deleted successfully');
-        fetchOpportunities();
+        await apiReviewOpportunity(opportunityId, { status: 'rejected' });
+        toast.success('Opportunity rejected successfully');
       }
+      await fetchOpportunities();
+    } catch {
+      toast.error('Opportunity action failed');
     }
     setActionLoading(false);
   };

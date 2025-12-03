@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { apiLogin, apiMe, apiRegister } from '@/lib/apiClient';
+
+interface LocalUser { id: string; email: string; name?: string; avatarUrl?: string; role?: 'user' | 'faculty' | 'admin' }
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  userRole: 'student' | 'faculty' | 'admin' | null;
+  user: LocalUser | null;
+  session: null;
+  userRole: 'user' | 'faculty' | 'admin' | null;
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -16,80 +17,70 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [userRole, setUserRole] = useState<'student' | 'faculty' | 'admin' | null>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
+  const [session] = useState<null>(null);
+  const [userRole, setUserRole] = useState<'user' | 'faculty' | 'admin' | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
+    // On mount, attempt to load user from stored token
+    const init = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          const { user } = await apiMe();
+          setUser({ id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, role: user.role });
+          setUserRole(user.role || 'user');
         } else {
+          setUser(null);
           setUserRole(null);
         }
+      } catch (e) {
+        setUser(null);
+        setUserRole(null);
+      } finally {
+        setLoading(false);
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    };
+    init();
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single();
-
-    if (!error && data) {
-      setUserRole(data.role as 'student' | 'faculty' | 'admin');
-    }
+  const fetchUserRole = async (_userId: string, role?: 'user' | 'faculty' | 'admin') => {
+    if (role) setUserRole(role);
+    else setUserRole('user');
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          name: name
-        }
-      }
-    });
-    return { error };
+    try {
+      const res = await apiRegister({ email, password, name });
+      localStorage.setItem('accessToken', res.accessToken);
+      localStorage.setItem('refreshToken', res.refreshToken);
+      setUser({ id: res.user.id, email: res.user.email, name: res.user.name, role: res.user.role });
+      await fetchUserRole(res.user.id, res.user.role);
+      return { error: null };
+    } catch (error: any) {
+      return { error };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const res = await apiLogin({ email, password });
+      localStorage.setItem('accessToken', res.accessToken);
+      localStorage.setItem('refreshToken', res.refreshToken);
+      setUser({ id: res.user.id, email: res.user.email, name: res.user.name, role: res.user.role });
+      await fetchUserRole(res.user.id, res.user.role);
+      return { error: null };
+    } catch (error: any) {
+      return { error };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    setUser(null);
     setUserRole(null);
     navigate('/auth');
   };

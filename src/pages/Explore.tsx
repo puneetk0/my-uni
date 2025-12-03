@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { supabase } from '@/integrations/supabase/client';
 import { Filter, User, Calendar, Search, Award } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
+import { apiListAchievements } from '@/lib/apiClient';
 
 type Achievement = {
   id: string;
@@ -39,66 +39,27 @@ export default function Explore() {
   const fetchAchievements = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('achievements')
-        .select(`
-          id,
-          title,
-          description,
-          type,
-          tags,
-          achievement_date,
-          is_featured,
-          media_url,
-          photos,
-          user_id
-        `)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false });
-
-      if (filter !== 'all') {
-        query = query.eq('type', filter);
-      }
-
-      const { data: achievementsData, error: achievementsError } = await query;
-
-      if (achievementsError) {
-        console.error('Error fetching achievements:', achievementsError);
-        toast.error('Failed to load achievements');
-        return;
-      }
-
-      if (achievementsData) {
-        // Fetch user data for each achievement
-        const userIds = [...new Set(achievementsData.map(a => a.user_id).filter(Boolean))];
-
-        if (userIds.length > 0) {
-          const { data: usersData, error: usersError } = await supabase
-            .from('profiles')
-            .select('id, email')
-            .in('id', userIds);
-
-          if (usersError) {
-            console.error('Error fetching users:', usersError);
-          } else if (usersData && Array.isArray(usersData)) {
-            const usersMap = usersData.reduce((acc, user) => {
-              if (user && typeof user === 'object' && user !== null) {
-                const typedUser = user as { id: string; email: string };
-                acc[typedUser.id] = typedUser as User;
-              }
-              return acc;
-            }, {} as Record<string, User>);
-            setUsers(usersMap);
-          }
-        } else {
-          setUsers({});
-        }
-
-        setAchievements(achievementsData);
-      }
+      const list = await apiListAchievements({
+        type: filter === 'all' ? undefined : filter,
+        status: 'approved',
+      });
+      const mapped = (list || []).map((a: any) => ({
+        id: a._id,
+        title: a.title,
+        description: a.description || a.shortDescription || '',
+        type: a.type || 'other',
+        tags: a.tags || [],
+        achievement_date: a.achievementDate,
+        is_featured: a.isFeatured,
+        media_url: a.mediaUrl,
+        photos: a.photos || [],
+        user_id: a.userId,
+      }));
+      setUsers({});
+      setAchievements(mapped as any);
     } catch (error) {
       console.error('Error:', error);
-      toast.error('An error occurred while loading achievements');
+      toast.error('Failed to load achievements');
     } finally {
       setLoading(false);
     }

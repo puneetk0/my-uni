@@ -10,7 +10,8 @@ import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Calendar, MapPin, Users, ExternalLink } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiCreateOpportunity } from '@/lib/apiClient';
+import { generateOpportunitySuggestions } from '@/lib/gemini';
 
 interface OrganizerInfo {
   name: string;
@@ -36,6 +37,9 @@ const CreateOpportunity = () => {
     location: '',
     eligibility: '',
     type: 'hackathon',
+    custom_type_label: '',
+    is_startup: false,
+    startup_name: '',
     apply_url: '',
     details_url: '',
     join_team_url: '',
@@ -70,143 +74,36 @@ const CreateOpportunity = () => {
     setLoading(true);
 
     try {
-      let thumbnail_url = '';
-
-      // Upload thumbnail if provided
-      if (thumbnailFile) {
-        // Ensure user is logged in
-        if (!user?.id) {
-          toast({ 
-            title: 'Error', 
-            description: 'You must be logged in to upload a thumbnail' 
-          });
-          setLoading(false);
-          return;
-        }
-
-        // First check if bucket exists
-        const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-        
-        if (bucketError) {
-          console.error('Error listing buckets:', bucketError);
-          toast({ 
-            title: 'Storage Error', 
-            description: 'Unable to access storage. Please check your connection and try again.',
-            variant: 'destructive'
-          });
-          setLoading(false);
-          return;
-        }
-
-        const bucketExists = buckets?.some(bucket => bucket.name === 'opportunity-thumbnails');
-        
-        if (!bucketExists) {
-          console.error('Bucket does not exist');
-          toast({ 
-            title: 'Storage Configuration Error', 
-            description: 'The opportunity thumbnails storage bucket is not configured. Please contact support to set up the storage bucket.',
-            variant: 'destructive'
-          });
-          setLoading(false);
-          return;
-        }
-
-        // Clean file name and create safe path
-        const cleanFileName = thumbnailFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const filePath = `${user.id}/${Date.now()}_${cleanFileName}`;
-        
-        console.log('Uploading to:', filePath);
-        console.log('File details:', {
-          name: thumbnailFile.name,
-          size: thumbnailFile.size,
-          type: thumbnailFile.type
-        });
-        
-        // Try to upload the file
-        const { error: uploadError, data: uploadData } = await supabase.storage
-          .from('opportunity-thumbnails')
-          .upload(filePath, thumbnailFile);
-
-        if (uploadError) {
-          console.error('Upload error details:', {
-            message: uploadError.message,
-            statusCode: (uploadError as any).statusCode,
-            error: uploadError
-          });
-          
-          // Provide more user-friendly error messages
-          let errorMessage = uploadError.message;
-          
-          if (uploadError.message.includes('bucket not found') || uploadError.message.includes('Bucket not found')) {
-            errorMessage = 'Storage bucket is not properly configured. The opportunity thumbnails bucket needs to be set up in Supabase. Please contact support or check the bucket configuration.';
-          } else if (uploadError.message.includes('permission') || uploadError.message.includes('Permission')) {
-            errorMessage = 'Permission denied. You may not have permission to upload files. Please ensure you are logged in and have the correct permissions.';
-          } else if (uploadError.message.includes('file size') || uploadError.message.includes('too large')) {
-            errorMessage = 'File too large. Please upload an image smaller than 5MB.';
-          } else if (uploadError.message.includes('mime type') || uploadError.message.includes('content type')) {
-            errorMessage = 'Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.';
-          } else if (uploadError.message.includes('duplicate') || uploadError.message.includes('already exists')) {
-            errorMessage = 'A file with this name already exists. Please try again or rename your file.';
-          }
-          
-          toast({ 
-            title: 'Upload Error', 
-            description: errorMessage,
-            variant: 'destructive'
-          });
-          setLoading(false);
-          return;
-        }
-
-        console.log('Upload successful:', uploadData);
-
-        const { data: publicUrlData } = supabase.storage
-          .from('opportunity-thumbnails')
-          .getPublicUrl(filePath);
-        thumbnail_url = publicUrlData.publicUrl;
-        console.log('Thumbnail URL:', thumbnail_url);
-      }
+      let thumbnail_url = thumbnailPreview || '';
 
       // Parse tags
       const tagsArray = formData.tags
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
+      await apiCreateOpportunity({
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        organization: organizerInfo.name,
+        location: formData.location,
+        applyUrl: formData.apply_url || undefined,
+        detailsUrl: formData.details_url || undefined,
+        joinTeamUrl: formData.join_team_url || undefined,
+        eligibility: formData.eligibility || undefined,
+        thumbnailUrl: thumbnail_url || undefined,
+        customTypeLabel: formData.type === 'other' ? (formData.custom_type_label || undefined) : undefined,
+        isStartup: formData.is_startup || formData.type === 'startup',
+        startupName: formData.startup_name || undefined,
+        deadline: formData.deadline || undefined,
+        tags: tagsArray,
+      });
 
-      const is_approved = userRole === 'faculty';
-
-      const { error } = await supabase
-        .from('opportunities')
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          short_description: formData.short_description,
-          thumbnail_url: thumbnail_url || null,
-          tags: tagsArray,
-          deadline: formData.deadline || null,
-          location: formData.location,
-          eligibility: formData.eligibility,
-          organizer_info: organizerInfo,
-          apply_url: formData.apply_url || null,
-          details_url: formData.details_url || null,
-          join_team_url: formData.join_team_url || null,
-          type: formData.type,
-          created_by: user?.id,
-          is_approved,
-        });
-
-      if (error) {
-        toast({ 
-          title: 'Error', 
-          description: error.message 
-        });
-      } else {
-        toast({ 
-          title: 'Success', 
-          description: 'Opportunity created successfully.' 
-        });
-        navigate('/opportunities');
-      }
+      toast({ 
+        title: 'Success', 
+        description: 'Opportunity submitted for review.' 
+      });
+      navigate('/opportunities');
     } catch (error) {
       console.error('Error creating opportunity:', error);
       toast({ 
@@ -215,6 +112,23 @@ const CreateOpportunity = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAISuggest = async () => {
+    if (!formData.title || !formData.description) return;
+    const suggestion = await generateOpportunitySuggestions({
+      title: formData.title,
+      description: formData.description,
+      type: formData.type,
+      organization: organizerInfo.name,
+    });
+    if (suggestion) {
+      setFormData((prev) => ({
+        ...prev,
+        short_description: suggestion.shortDescription,
+        tags: suggestion.tags.join(', '),
+      }));
     }
   };
 
@@ -291,7 +205,6 @@ const CreateOpportunity = () => {
                     </button>
                   </div>
                 )}
-
                 {!thumbnailPreview && (
                   <div 
                     className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all hover:border-[#3271f0] hover:bg-blue-50/30 group"
@@ -440,6 +353,7 @@ const CreateOpportunity = () => {
                       <SelectItem value="event">Event</SelectItem>
                       <SelectItem value="competition">Competition</SelectItem>
                       <SelectItem value="workshop">Workshop</SelectItem>
+                      <SelectItem value="startup">Startup</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -701,8 +615,13 @@ const CreateOpportunity = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* AI & Submit */}
               <div className="pt-4">
+                <div className="flex gap-3 mb-3">
+                  <Button type="button" variant="outline" onClick={handleAISuggest} disabled={!formData.title || !formData.description}>
+                    Generate with AI
+                  </Button>
+                </div>
                 <Button
                   type="submit"
                   disabled={loading}

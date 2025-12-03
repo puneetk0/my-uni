@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { OpportunityCard } from '@/components/OpportunityCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { apiListOpportunities } from '@/lib/apiClient';
 
 interface OrganizerInfo {
   name?: string;
@@ -46,34 +46,28 @@ const Opportunities = () => {
 
   const fetchOpportunities = async () => {
     try {
-      let query: any = supabase
-        .from('opportunities')
-        .select('*')
-        .eq('is_approved', true);
-
-      if (filter !== 'all') {
-        query = query.eq('type', filter);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching opportunities:', error);
-      } else {
-        // Convert database response to match our type structure
-        const formattedData = (data as any[] || []).map(opp => ({
-          ...opp,
-          id: String(opp.id),
-          short_description: opp.short_description || opp.description?.substring(0, 150) + '...' || '',
-          tags: opp.tags || [],
-          location: opp.location || 'TBD',
-          eligibility: opp.eligibility || 'Open to all',
-          organizer_info: opp.organizer_info || { name: '', email: '', role: '' },
-          type: opp.type || 'other',
-          status: opp.status || 'active'
-        }));
-        setOpportunities(formattedData);
-      }
+      const list = await apiListOpportunities({ type: filter === 'all' ? undefined : filter });
+      const formattedData = (list || []).map((opp: any) => ({
+        id: String(opp._id),
+        title: opp.title,
+        description: opp.description,
+        short_description: opp.short_description || opp.description?.substring(0, 150) + '...' || '',
+        thumbnail_url: opp.thumbnailUrl,
+        tags: opp.tags || [],
+        deadline: opp.deadline,
+        location: opp.location || 'TBD',
+        eligibility: opp.eligibility || 'Open to all',
+        organizer_info: { name: opp.organization || '', email: '', role: '' },
+        apply_url: opp.applyUrl,
+        details_url: opp.detailsUrl,
+        join_team_url: opp.joinTeamUrl,
+        type: opp.type || 'other',
+        status: 'active',
+        is_approved: opp.isApproved !== false,
+        created_at: opp.createdAt,
+        created_by: opp.createdBy,
+      }));
+      setOpportunities(formattedData as any);
     } catch (error) {
       console.error('Error fetching opportunities:', error);
     } finally {

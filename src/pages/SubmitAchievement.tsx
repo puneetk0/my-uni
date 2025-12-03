@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +11,7 @@ import { Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
+import { apiCreateAchievement } from '@/lib/apiClient';
 
 const achievementSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(200, 'Title is too long'),
@@ -89,56 +89,29 @@ export default function SubmitAchievement() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
 
-      const uploadedPhotoUrls: string[] = [];
-
-      if (photoFiles.length > 0) {
-        for (const file of photoFiles) {
-          const filePath = `${user?.id}/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from('achievement-photos')
-            .upload(filePath, file);
-
-          if (uploadError) {
-            toast.error(`Failed to upload photo: ${file.name}`);
-            setLoading(false);
-            return;
-          }
-
-          const { data: publicUrlData } = supabase.storage
-            .from('achievement-photos')
-            .getPublicUrl(filePath);
-          uploadedPhotoUrls.push(publicUrlData.publicUrl);
-        }
-      } else {
+      if (photoPreviews.length === 0) {
         toast.error('At least one photo is required.');
         setLoading(false);
         return;
       }
 
-      const { error } = await supabase
-        .from('achievements')
-        .insert({
-          user_id: user?.id,
-          title: validatedFormData.title,
-          short_description: validatedFormData.short_description,
-          description: validatedFormData.description,
-          type: validatedFormData.type,
-          tags: tagsArray,
-          achievement_date: validatedFormData.achievement_date,
-          how_it_started: validatedFormData.how_it_started || null,
-          how_we_built_it: validatedFormData.how_we_built_it || null,
-          what_we_achieved: validatedFormData.what_we_achieved || null,
-          what_we_learned: validatedFormData.what_we_learned || null,
-          photos: uploadedPhotoUrls,
-          status: 'pending',
-        });
+      // For now, send base64 previews as photos; later we can swap to a file upload endpoint.
+      await apiCreateAchievement({
+        title: validatedFormData.title,
+        shortDescription: validatedFormData.short_description,
+        description: validatedFormData.description,
+        type: validatedFormData.type,
+        tags: tagsArray,
+        achievementDate: validatedFormData.achievement_date,
+        howItStarted: validatedFormData.how_it_started || null,
+        howWeBuiltIt: validatedFormData.how_we_built_it || null,
+        whatWeAchieved: validatedFormData.what_we_achieved || null,
+        whatWeLearned: validatedFormData.what_we_learned || null,
+        photos: photoPreviews,
+      });
 
-      if (error) {
-        toast.error('Failed to submit achievement');
-      } else {
-        toast.success('Achievement submitted successfully! Awaiting approval.');
-        navigate('/profile');
-      }
+      toast.success('Achievement submitted successfully!');
+      navigate('/profile');
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);

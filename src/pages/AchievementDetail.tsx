@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
-import { supabase } from '@/integrations/supabase/client';
+// Supabase removed for this page; using Node API client instead
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { CheckCircle, XCircle, Clock, CalendarDays, ThumbsUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiGetAchievement, apiGetComments, apiPostComment, apiToggleUpvote, apiGetUpvoteCount } from '@/lib/apiClient';
 import { generateConciseSummary } from '@/lib/gemini';
 
 type Achievement = {
@@ -78,91 +79,79 @@ export default function AchievementDetail() {
   }, [id, user]);
 
   const fetchAchievementDetails = async () => {
+    if (!id) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('achievements')
-      .select(`
-        id,
-        title,
-        short_description,
-        description,
-        type,
-        tags,
-        achievement_date,
-        status,
-        is_featured,
-        media_url,
-        how_it_started,
-        how_we_built_it,
-        what_we_achieved,
-        what_we_learned,
-        upvotes,
-        photos,
-        user_id,
-        profiles!achievements_user_id_fkey(name, email, username, avatar_url)
-      `)
-      .eq('id', id)
-      .single();
+    try {
+      const data = await apiGetAchievement(id);
+      const mapped = {
+        id: data._id,
+        title: data.title,
+        short_description: data.shortDescription,
+        description: data.description,
+        type: data.type,
+        tags: data.tags || [],
+        achievement_date: data.achievementDate,
+        status: data.status,
+        is_featured: data.isFeatured,
+        media_url: data.mediaUrl,
+        how_it_started: data.howItStarted,
+        how_we_built_it: data.howWeBuiltIt,
+        what_we_achieved: data.whatWeAchieved,
+        what_we_learned: data.whatWeLearned,
+        upvotes: 0,
+        photos: data.photos || [],
+        profiles: { name: 'Unknown User', username: null, avatar_url: null },
+      } as any;
+      // fetch count
+      const { count } = await apiGetUpvoteCount(data._id);
+      mapped.upvotes = count;
+      setAchievement(mapped);
 
-    if (error) {
-      toast.error('Failed to load achievement details');
-      console.error('Error fetching achievement:', error);
-    } else {
-      setAchievement(data as any);
-
-      // Generate a concise, readable summary via Gemini
+      // Generate concise summary
       try {
         setSummaryLoading(true);
         const concise = await generateConciseSummary({
-          title: data.title,
-          description: data.description || '',
-          how_it_started: data.how_it_started,
-          how_we_built_it: data.how_we_built_it,
-          what_we_achieved: data.what_we_achieved,
-          what_we_learned: data.what_we_learned,
+          title: mapped.title,
+          description: mapped.description || '',
+          how_it_started: mapped.how_it_started,
+          how_we_built_it: mapped.how_we_built_it,
+          what_we_achieved: mapped.what_we_achieved,
+          what_we_learned: mapped.what_we_learned,
         });
         setSummary(concise);
-      } catch (e) {
-        console.error('Failed to generate Gemini summary', e);
       } finally {
         setSummaryLoading(false);
       }
+    } catch (error) {
+      console.error('Error fetching achievement:', error);
+      toast.error('Failed to load achievement details');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchComments = async () => {
-    const { data, error } = await supabase
-      .from('achievement_comments')
-      .select(`
-        id,
-        body,
-        created_at,
-        user_id,
-        profiles!achievement_comments_user_id_fkey(name, email, username, avatar_url)
-      `)
-      .eq('achievement_id', id)
-      .order('created_at', { ascending: true });
-
-    if (error) {
+    if (!id) return;
+    try {
+      const list = await apiGetComments(id);
+      // Map to existing shape used by UI
+      const mapped = list.map((c: any) => ({
+        id: c._id,
+        body: c.body,
+        created_at: c.createdAt,
+        user_id: c.userId,
+        profiles: { name: 'User', username: null, avatar_url: null },
+      }));
+      setComments(mapped);
+    } catch (error) {
       console.error('Error fetching comments:', error);
-    } else {
-      setComments(data || []);
     }
   };
 
   const checkUpvoteStatus = async () => {
-    if (!user) return;
-    const { data, error } = await supabase
-      .from('achievement_upvotes')
-      .select('*')
-      .eq('achievement_id', id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (data) {
-      setUpvoted(true);
-    }
+    // With the Node API, we don't yet expose a dedicated endpoint to check if the
+    // current user has upvoted. Default to false; this will update on first toggle.
+    setUpvoted(false);
   };
 
   const handleUpvote = async () => {
@@ -172,29 +161,13 @@ export default function AchievementDetail() {
     }
 
     if (upvoted) {
-      const { error } = await supabase
-        .from('achievement_upvotes')
-        .delete()
-        .eq('achievement_id', id)
-        .eq('user_id', user.id);
-
-      if (error) {
-        toast.error(`Failed to remove upvote: ${error.message}`);
-      } else {
-        setUpvoted(false);
-        setAchievement(prev => prev ? { ...prev, upvotes: prev.upvotes - 1 } : null);
-      }
+      const res = await apiToggleUpvote(id!);
+      setUpvoted(res.upvoted);
+      setAchievement(prev => prev ? { ...prev, upvotes: Math.max(0, prev.upvotes - 1) } : null);
     } else {
-      const { error } = await supabase
-        .from('achievement_upvotes')
-        .insert({ achievement_id: id, user_id: user.id });
-
-      if (error) {
-        toast.error(`Failed to add upvote: ${error.message}`);
-      } else {
-        setUpvoted(true);
-        setAchievement(prev => prev ? { ...prev, upvotes: prev.upvotes + 1 } : null);
-      }
+      const res = await apiToggleUpvote(id!);
+      setUpvoted(res.upvoted);
+      setAchievement(prev => prev ? { ...prev, upvotes: prev.upvotes + 1 } : null);
     }
   };
 
@@ -204,16 +177,13 @@ export default function AchievementDetail() {
       return;
     }
 
-    const { error } = await supabase
-      .from('achievement_comments')
-      .insert({ achievement_id: id, user_id: user.id, body: newComment.trim() });
-
-    if (error) {
-      toast.error(`Failed to post comment: ${error.message}`);
-    } else {
+    try {
+      await apiPostComment(id!, newComment.trim());
       setNewComment('');
       fetchComments();
       toast.success('Comment posted!');
+    } catch (error: any) {
+      toast.error(`Failed to post comment`);
     }
   };
 
@@ -390,7 +360,7 @@ export default function AchievementDetail() {
               {user && (
                 <div className="flex items-start gap-3 mb-6">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarImage src={user?.avatarUrl} />
                     <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
-import { supabase } from '@/integrations/supabase/client';
 import PolaroidCard from '@/components/PolaroidCard';
+import { apiListAchievements } from '@/lib/apiClient';
 
 type Achievement = {
   id: string;
@@ -31,16 +31,21 @@ const Index = () => {
   }, [user, loading, navigate]);
 
   const fetchAchievements = async () => {
-    const { data, error } = await supabase
-      .from('achievements')
-      .select('id, title, short_description, media_url, photos, upvotes')
-      .limit(10)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching achievements:', error);
-    } else {
-      setAchievements((data as any as Achievement[]) || []);
+    try {
+      const list = await apiListAchievements({ status: 'approved' });
+      const mapped = (list || [])
+        .slice(0, 10)
+        .map((a: any) => ({
+          id: a._id,
+          title: a.title,
+          short_description: a.shortDescription || a.description || '',
+          media_url: a.mediaUrl,
+          photos: a.photos || [],
+          upvotes: a.upvotes || 0,
+        }));
+      setAchievements(mapped as any);
+    } catch (e) {
+      console.error('Error fetching achievements:', e);
     }
   };
 
