@@ -13,6 +13,7 @@ import Opportunities from "./pages/Opportunities";
 import CreateOpportunity from "./pages/CreateOpportunity";
 import Profile from "./pages/Profile";
 import AchievementDetail from "./pages/AchievementDetail";
+import OpportunityDetail from "./pages/OpportunityDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/create-opportunity" element={<CreateOpportunity />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/achievements/:id" element={<AchievementDetail />} />
+            <Route path="/opportunities/:id" element={<OpportunityDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

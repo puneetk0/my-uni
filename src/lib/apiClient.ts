@@ -143,3 +143,15 @@ export async function apiReviewOpportunity(id: string, payload: { status: 'appro
   const r = await api.post(`/api/opportunities/${id}/review`, payload);
   return r.data as any;
 }
+
+// Opportunity detail
+export async function apiGetOpportunity(id: string) {
+  const r = await api.get(`/api/opportunities/${id}`);
+  return r.data as any;
+}
+
+// User's opportunities
+export async function apiGetUserOpportunities(userId: string) {
+  const r = await api.get(`/api/opportunities/user/${userId}`);
+  return r.data as any[];
+}

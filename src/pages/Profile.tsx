@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { Award, CalendarDays, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { apiGetUserAchievements } from '@/lib/apiClient';
+import { apiGetUserAchievements, apiGetUserOpportunities } from '@/lib/apiClient';
 
 type Achievement = {
   id: string;
@@ -20,10 +20,19 @@ type Achievement = {
   media_url: string | null;
 };
 
+type Opportunity = {
+  id: string;
+  title: string;
+  type?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  deadline?: string;
+};
+
 export default function Profile() {
   const { user, userRole } = useAuth();
   const [profile] = useState<any>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving] = useState(false);
   const [editMode] = useState(false);
@@ -60,9 +69,20 @@ export default function Profile() {
         media_url: a.mediaUrl || null,
       }));
       setAchievements(mapped);
-      const approved = mapped.filter((a) => a.status === 'approved').length;
-      const pending = mapped.filter((a) => a.status === 'pending').length;
-      const rejected = mapped.filter((a) => a.status === 'rejected').length;
+
+      const oppList = await apiGetUserOpportunities(user.id);
+      const oppMapped = (oppList || []).map((o: any) => ({
+        id: o._id,
+        title: o.title,
+        type: o.type || 'other',
+        status: (o.status as 'pending' | 'approved' | 'rejected') || (o.isApproved ? 'approved' : 'pending'),
+        deadline: o.deadline,
+      }));
+      setOpportunities(oppMapped);
+
+      const approved = mapped.filter((a) => a.status === 'approved').length + oppMapped.filter((o) => o.status === 'approved').length;
+      const pending = mapped.filter((a) => a.status === 'pending').length + oppMapped.filter((o) => o.status === 'pending').length;
+      const rejected = mapped.filter((a) => a.status === 'rejected').length + oppMapped.filter((o) => o.status === 'rejected').length;
       setStats({ approved, pending, rejected, totalUpvotes: 0 });
     } catch (e) {
       console.error('Error fetching user achievements:', e);
@@ -258,7 +278,44 @@ export default function Profile() {
             ))}
           </div>
         )}
+
+        <h2 className="text-3xl font-bold my-6">My Opportunities</h2>
+        {opportunities.length === 0 ? (
+          <Card className="glass-card text-center py-12">
+            <CardContent>
+              <p className="text-muted-foreground">No opportunities submitted yet.</p>
+              <Link to="/create-opportunity" className="mt-4 inline-block">
+                <Button>Create Opportunity</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {opportunities.map((op) => (
+              <Link key={op.id} to={`/opportunities/${op.id}`} className="block group">
+                <Card className="hover:shadow-lg transition-shadow duration-200 ease-in-out">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">
+                        {op.title}
+                      </CardTitle>
+                      <Badge variant="outline" className="capitalize">
+                        {op.status}
+                      </Badge>
+                    </div>
+                    {op.deadline && (
+                      <CardDescription className="flex items-center gap-1 text-sm">
+                        <Clock className="h-3 w-3" />
+                        Deadline: {new Date(op.deadline).toLocaleDateString()}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
-}
+} 

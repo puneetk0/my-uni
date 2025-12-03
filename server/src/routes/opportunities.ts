@@ -13,6 +13,12 @@ router.get('/', async (req, res) => {
   res.json(list);
 });
 
+router.get('/:id', async (req, res) => {
+  const item = await Opportunity.findById(req.params.id);
+  if (!item) return res.status(404).json({ error: 'Not found' });
+  res.json(item);
+});
+
 const CreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
@@ -39,6 +45,13 @@ router.post('/', requireAuth, async (req: AuthedRequest, res) => {
   if (payload.deadline) payload.deadline = new Date(payload.deadline);
   const doc = await Opportunity.create({ ...payload, status: 'pending', createdBy: req.userId });
   res.status(201).json(doc);
+});
+
+// User's opportunities (self)
+router.get('/user/:userId', requireAuth, async (req: AuthedRequest, res) => {
+  if (req.userId !== req.params.userId) return res.status(403).json({ error: 'Forbidden' });
+  const list = await Opportunity.find({ createdBy: req.params.userId }).sort({ createdAt: -1 });
+  res.json(list);
 });
 
 // Admin/faculty: list pending opportunities
