@@ -1,72 +1,187 @@
-# AchieveHub - Showcase Your Achievements
+#CampusConnect
 
-AchieveHub is a platform for students to showcase their academic and extracurricular achievements, get them verified by faculty, and inspire their peers. It also provides a dedicated section for students and faculty to post and manage opportunities like hackathons, projects, and internships.
+CampusConnect is a platform where students can showcase achievements, tell their stories, and discover opportunities, all wrapped in a playful, bold, retro-outline UI.
 
-## Project Features
+Students often achieve incredible things — they win hackathons, publish research papers, build products, intern at great places — but there’s no central place to celebrate these achievements or preserve them long-term.
 
-*   **Achievement Showcase:** Students can submit their achievements with details, tags, and media.
-*   **Faculty Verification:** Faculty members can review, approve, reject, and feature student achievements.
-*   **Opportunities Board:** Students and faculty can post various opportunities (hackathons, internships, projects).
-*   **Opportunity Approval Workflow:** Faculty-posted opportunities are auto-approved; student-posted opportunities require faculty approval.
-*   **Faculty Dashboard:** A dedicated dashboard for faculty to manage both achievements and opportunities.
-```
-## How can I edit this code?
+We fix that.
 
-# Step 1: Clone the repository using the project's Git URL.
-git clone https://github.com/puneetk0/my-uni.git
+What Is This Startup About?
 
-# Step 2: Navigate to the project directory.
-cd my-uni
+CampusConnect solves the problem of student achievements being scattered, temporary, or ignored.
+Instead of disappearing on WhatsApp groups or college notice boards, every achievement becomes a permanent, verified, inspiring story.
 
-# Step 3: Install the necessary dependencies.
-npm i
+Our platform brings together 3 major pillars:
 
-# Step 4: Set up Supabase (see section below).
+1. Achievements & Stories
 
-# Step 5: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Students can post their achievements with:
 
-**Edit a file directly in GitHub**
+Title
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Image
 
-**Use GitHub Codespaces**
+Team members
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Type (Hackathon, Project, Internship, Research, etc.)
 
-## Supabase Setup
+Date
 
-This project uses Supabase for its backend. You'll need to set up your Supabase project and configure the environment variables.
+Story (“How we did it”)
 
-1.  **Create a Supabase Project:** Go to [Supabase](https://supabase.com/) and create a new project.
-2.  **Configure Environment Variables:** Create a `.env` file in the root of your project and add the following:
-    ```
-    VITE_SUPABASE_PROJECT_ID="YOUR_SUPABASE_PROJECT_ID"
-    VITE_SUPABASE_PUBLISHABLE_KEY="YOUR_SUPABASE_ANON_KEY"
-    VITE_SUPABASE_URL="YOUR_SUPABASE_URL"
-    SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
-    ```
-    You can find these values in your Supabase project settings under `API`. The `SUPABASE_SERVICE_ROLE_KEY` is a sensitive key and should not be exposed in client-side code.
-3.  **Run Migrations:** Apply the database migrations to set up the necessary tables and RLS policies.
-    ```sh
-    npx supabase db push
-    ```
-    *Note: If you encounter issues with `supabase db push`, ensure your Supabase CLI is up to date and you are authenticated (`supabase login`).*
+Likes
 
-## What technologies are used for this project?
+Read more (full story view)
 
-This project is built with:
+Each achievement becomes a retro comic-style card — bold, fun, and extremely shareable.
 
--   Vite
--   TypeScript
--   React
--   shadcn-ui
--   Tailwind CSS
--   Supabase (Backend as a Service)
+Verified achievements become part of a student’s Profile Timeline.
+
+2. Explore Page
+
+A dynamic feed that lets anyone explore:
+
+Featured achievements
+
+All achievements
+
+Filters (Hackathon / Research / Internship / Competition / Project)
+
+Leaderboard (Top Achievers)
+
+Designed in a bold, grid-lined, outline aesthetic inspired by "Make It Ugly / Make It Fun" style.
+
+3. Profile Page
+
+Every student has a unique profile showing:
+
+Avatar
+
+Role (Student / Faculty)
+
+Achievements timeline
+
+About section
+
+Discussions (future)
+
+This acts as a living, verified portfolio.
+
+4. Opportunities Page
+
+Students can browse upcoming:
+
+Hackathons
+
+Internships
+
+Peer Projects
+
+Competitions
+
+Events
+
+Faculty can post opportunities; students can view/apply.
+
+Why This Platform Matters
+
+✔ Students feel recognized
+✔ Faculty can verify and highlight achievements
+✔ Peers get inspired through stories
+✔ A digital portfolio grows automatically
+✔ Colleges gain a transparent student-achievement ecosystem
+✔ Opportunities and visibility increase
+
+It becomes a Student OS for Achievements + Discovery.
+
+Design Philosophy
+
+The UI uses a unique retro, hand-drawn, thick-outline aesthetic:
+
+Thick black borders
+
+White/light-gray backgrounds with subtle grid patterns
+
+Comic-style labels
+
+Playful visual personality
+
+High readability
+
+Minimal color but maximum character
+
+This style makes every card feel like a collectible achievement sticker — motivating students to post more.
+
+Core Features (MVP)
+✔ Achievement Submission
+
+Students submit achievements with image, title, team, tags, etc.
+
+✔ Retro-Card Display
+
+Every achievement appears in a bold outlined card with:
+
+Type tag
+
+Image
+
+Team
+
+Date
+
+Likes
+
+“Read More”
+
+✔ Full Story View
+
+Users can read the full achievement story.
+
+✔ Profile Timeline
+
+All achievements displayed chronologically.
+
+✔ Explore Page
+
+Main feed of achievements with categories & search.
+
+✔ Opportunities Page
+
+Curated list of hackathons, internships, competitions, etc.
+
+✔ Faculty Dashboard (Phase 2)
+
+Faculty can verify achievements and post opportunities.
+
+🛠 Tech Stack
+Frontend
+
+Next.js 14 (App Router)
+
+React
+
+TailwindCSS
+
+Framer Motion (for micro-animations)
+
+Custom Retro UI Components (outline cards, badges, icons)
+
+🗄 Backend
+
+Node.js + Express.js
+
+MongoDB Atlas
+
+☁️ Hosting
+
+Render → Backend hosting
+
+Vercel → Frontend deployment
+
+MongoDB Atlas → Database hosting
+
+🔌 APIs & Integrations
+
+JWT Authentication
+
+REST API for achievements, opportunities, profiles
